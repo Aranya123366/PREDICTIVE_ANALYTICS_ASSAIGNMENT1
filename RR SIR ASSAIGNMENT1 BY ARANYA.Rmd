@@ -1,0 +1,54 @@
+---
+title: "BOSTON HOUSING ANALYSIS"
+author: "729_ARANYA PRADHAN"
+date: "2026-01-20"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+#** 1. Report the “class” of the data set. How many rows and columns are in this data set? What do the rows and columns represent? **
+
+```{r}
+library(MASS)
+data(Boston)
+
+# Report class and dimensions
+class(Boston)
+dim(Boston)
+```
+ROWS: Each of the 506 row represents a specific suburb or town in Boston.
+COLUMN : The 14 columns represent various housing and demographic variables measured for those suburbs.
+##** 2. Create a smaller data set with the variables median value of owner-occupiedhomes, per capita crime rate, nitrogen oxides concentration, proportion of blacks and percentage of lower status of the population. Choosing median value of owner occupied homes as the response and the rest as the predictors, make scatter plots of the response versus each predictor. Present the scatter plots in different panels of the same graph. Comment on your findings
+
+```{r}
+# Create smaller dataset
+small_boston <- Boston[, c("medv", "crim", "nox", "black", "lstat")]
+
+# Scatter plots in different panels
+par(mfrow = c(2, 2))
+plot(small_boston$crim, small_boston$medv, main="Crime vs Medv")
+plot(small_boston$nox, small_boston$medv, main="NOx vs Medv")
+plot(small_boston$black, small_boston$medv, main="Blacks vs Medv")
+plot(small_boston$lstat, small_boston$medv, main="Lstat vs Medv")
+```
+
+###** 3. Which suburb of Boston has lowest median value of owner-occupied homes? What are the values of the other predictors mentioned in (2), for that suburb. How do these values compare to the overall ranges for those predictors? Comment on your findings.**
+```{r}
+ # Suburb with lowest medv
+min_medv_suburb <- Boston[which.min(Boston$medv), ]
+print(min_medv_suburb)
+
+# Compare with overall ranges
+summary(Boston)
+```
+COMMENT ON FINDINGS: The suburbs with the lowest median home values are not just "cheap"; they are outliers that sit at the extreme ends of negative social and environmental indicators, characterized by nearly the highest crime, highest pollution, and highest percentage of low-income population in the entire region.
+
+####** 4. Does any suburb of Boston stand out for having notably high crime rates,tax rates, or pupil–teacher ratios? **
+```{r}
+par(mfrow = c(1, 3))
+boxplot(Boston$crim, main="Crime Rate")
+boxplot(Boston$tax, main="Tax Rate")
+boxplot(Boston$ptratio, main="Pupil-Teacher Ratio")
+```
+CONCLUSION: The analysis indicates that the Boston housing market is highly stratified. High-value homes are found in safe, low-pollution areas with high social status, while the lowest-value homes are concentrated in areas characterized by extreme crime, high pollution, and significant social disadvantage.
