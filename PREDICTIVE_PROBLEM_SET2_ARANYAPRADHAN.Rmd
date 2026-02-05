@@ -1,0 +1,128 @@
+---
+title: "PREDICTIVE PROBLEM SET 2"
+author: "729_ARANYA PRADHAN"
+date: "2026-02-05"
+output:
+  html_document: default
+  word_document: default
+---
+#*1 Problem to demonstrate that the population regression line is fixed, but least square regression line varies*
+```{r}
+set.seed(123)
+n <- 50
+
+# Step 1: Population line 
+x_range <- seq(5, 10, length.out = 100)
+y_pop <- 2 + 3 * x_range 
+
+plot(x_range, y_pop, type = "l", col = "red", lwd = 2, ylim = c(10, 40),
+     xlab = "x", ylab = "y", main = "Population vs. Sample Regression Lines")
+
+# Step 2-4: Generate 5 sample lines 
+colors <- c("blue", "green", "orange", "purple", "brown")
+
+for (i in 1:5) {
+  x <- runif(n, 5, 10) 
+  epsilon <- rnorm(n, 0, 4) 
+  y <- 2 + 3 * x + epsilon 
+  
+  model <- lm(y ~ x) 
+  abline(model, col = colors[i], lty = 2)
+}
+
+legend("topleft", legend = c("Population Line", paste("Sample", 1:5)),
+       col = c("red", colors), lty = c(1, rep(2, 5)), cex = 0.8)
+```
+Interpretation: The red line is the "truth". Because each sample has different random noise ($\epsilon$), the estimated slopes and intercepts vary slightly around the true population values.
+
+#*2 Problem to demonstrate that βˆ0 and βˆ minimises RSS*
+```{r}
+set.seed(123) 
+n <- 50
+
+# Step 1: Generate data 
+x <- runif(n, 5, 10)
+x_centered <- x - mean(x)
+epsilon <- rnorm(n, 0, 1)
+y <- 2 + 3 * x_centered + epsilon 
+
+# Step 2: OLS Estimates 
+fit <- lm(y ~ x_centered)
+beta0_hat <- coef(fit)[1]
+beta1_hat <- coef(fit)[2]
+
+# Step 3: Grid search for RSS 
+b0_grid <- seq(beta0_hat - 1, beta0_hat + 1, length.out = 100)
+b1_grid <- seq(beta1_hat - 1, beta1_hat + 1, length.out = 100)
+
+rss_func <- function(b0, b1) {
+  sum((y - b0 - b1 * x_centered)^2) 
+}
+
+# Compute RSS for combinations
+rss_results <- outer(b0_grid, b1_grid, Vectorize(rss_func))
+
+# Find minimum 
+min_idx <- which(rss_results == min(rss_results), arr.ind = TRUE)
+cat("Minimum RSS found at: Beta0 =", b0_grid[min_idx[1]], ", Beta1 =", b1_grid[min_idx[2]], "\n")
+cat("OLS Estimates: Beta0 =", beta0_hat, ", Beta1 =", beta1_hat, "\n")
+```
+#*3. Unbiasedness of Least Squares Estimators*
+```{r}
+set.seed(123) # 
+n <- 50
+R <- 1000 # 
+beta0_true <- 2 
+beta1_true <- 3
+
+estimates <- replicate(R, {
+  x <- runif(n, 0, 1) 
+  eps <- rnorm(n, 0, 1)  
+  y <- beta0_true + beta1_true * x + eps 
+  coef(lm(y ~ x)) 
+})
+
+# Average of estimates 
+avg_estimates <- rowMeans(estimates)
+print(avg_estimates)
+```
+Comment: The average $\hat{\beta}_0$ and $\hat{\beta}$ should be very close to 2 and 3 respectively, confirming that the estimators are unbiased.
+
+
+#*4.Comparing Simple Linear Regressions (Boston Data)*
+```{r}
+library(MASS)
+data("Boston") 
+
+# Predictors: crim, nox, black, lstat 
+predictors <- c("crim", "nox", "black", "lstat")
+results <- list()
+
+# (a) Run four separate regressions 
+for (p in predictors) {
+  formula_str <- as.formula(paste("medv ~", p))
+  results[[p]] <- lm(formula_str, data = Boston)
+}
+
+# (b) & (c) Present output and evaluate 
+summary_table <- data.frame(
+  Predictor = predictors,
+  Estimate = sapply(results, function(m) coef(m)[2]),
+  R_Squared = sapply(results, function(m) summary(m)$r.squared),
+  P_Value = sapply(results, function(m) summary(m)$coefficients[2, 4])
+)
+
+print(summary_table)
+```
+Analysis Best Fit: Look for the highest R-squared value. Usually, lstat (lower status percentage) explains the most variance in medv in this dataset.Usefulness: All four predictors typically show significant p-values ($< 0.05$), meaning they are useful individual predictors, though their impact varies (e.g., nox has a negative relationship with price).
+
+
+
+
+
+
+
+
+
+
+
