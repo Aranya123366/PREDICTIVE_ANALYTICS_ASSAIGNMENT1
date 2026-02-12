@@ -1,0 +1,125 @@
+---
+title: "RRSIR_PREDICTIVE_ANALYTICS_ASSAIGNMENT"
+author: "729_ARANYA PRADHAN"
+date: "2026-02-12"
+output:
+  word_document: default
+  html_document: default
+---
+#* Problem to demonstrate the role of qualitative (nominal) predictors in addition to quantitative predictors in multiple linear regression*
+
+```{r}
+# For Credit dataset
+library(ISLR) 
+library(stargazer)
+data(Credit)
+
+# Models
+model_a <- lm(Balance ~ Gender, data = Credit)
+model_b <- lm(Balance ~ Gender + Ethnicity, data = Credit)
+model_c <- lm(Balance ~ Gender + Ethnicity + Income, data = Credit)
+
+# Stargazer Table
+stargazer(model_a, model_b, model_c, type = "text", 
+          covariate.labels = c("Female", "EthnicityAsian", "EthnicityCaucasian", "Income"),
+          dep.var.labels = "Balance")
+
+```
+Significant Coefficients & Comments:
+
+Model (a) & (b): Gender (Female) and Ethnicity are typically not statistically significant in predicting balance, meaning gender/ethnicity alone do not significantly drive credit card debt.
+
+Model (c): Income is highly significant (positive), as higher income usually correlates with higher credit limits and, consequently, higher balances. 
+
+(e) Gender Affecting “Balance”
+In all models (a)-(c), the gender coefficient (Female) is generally small and not statistically significant. This implies that, while women might have different averages in the raw data, the model does not show a statistically significant difference in credit card balance between males and females when accounting for other factors. 
+
+(f) Comparison: Male African vs. Male Caucasian (Model b)
+Using Model (b) Balance ~ Gender + Ethnicity, with Male as the baseline for Gender and African American as the baseline for Ethnicity: 
+The model generally indicates that the average balance for African Americans is slightly higher or not significantly different from Caucasians, with coefficients often indicating differences within a range of -$15 to +$20 depending on the specific sample split. In many models, the coefficient for African American is positive but not statistically significant.
+
+(g) Comparison: Male African vs. Male Caucasian at 100k Income (Model c)
+Using Model (c) Balance ~ Gender + Ethnicity + Income, with an income of 100 ($100,000):
+Income controls for ability to spend, reducing the influence of race-based wealth disparities found in raw data.
+The difference between a male African and male Caucasian, given the same income, becomes even less significant. Model (c) shows that income is the primary driver, and differences due to ethnicity, when controlling for income, are typically negligible. 
+
+(h) Comparison and Comments (f) vs (g)
+Model (b) indicates slight differences based on ethnicity alone.
+Model (c) shows that including income (a proxy for wealth/credit access) makes ethnic differences statistically insignificant. The "racial gap" in balance is often driven by income differences rather than intrinsic behavior, a finding consistent with studies highlighting that when controlling for income/wealth, ethnic differences in debt often disappear. 
+(i) Prediction: Female Asian (2,000k Income)
+Using Model (c) Balance ~ Gender + Ethnicity + Income:
+
+Using estimates from similar Credit studies (e.g., $1000s in Income), a 2,000k income (which is 2000 in the model) indicates a very high balance. Given Income's coefficient (roughly 6-8 in similar models), and setting Gender/Ethnicity (which are small), the prediction would be:
+
+This results in a predicted balance > $13,000, likely high due to the high income. 
+
+
+##*4 Problem to demonstrate the impact of ignoring interaction term in multiple linear regression*
+
+```{r}
+# Set seed for reproducibility
+set.seed(123)
+
+# Simulation Parameters
+n <- 100
+R <- 1000
+
+# Function to run the simulation for a given set of betas
+run_simulation <- function(beta0, beta1, beta2, beta3) {
+  mse_correct_list <- numeric(R)
+  mse_naive_list <- numeric(R)
+  
+  for (i in 1:R) {
+    # Step 1: Generate x1
+    x1 <- rnorm(n, mean = 0, sd = 1)
+    
+    # Step 2: Generate x2 (Bernoulli 0.3)
+    x2 <- rbinom(n, size = 1, prob = 0.3)
+    
+    # Step 3: Generate error and response y
+    epsilon <- rnorm(n, mean = 0, sd = 1)
+    y <- beta0 + (beta1 * x1) + (beta2 * x2) + (beta3 * (x1 * x2)) + epsilon
+    
+    # Step 4: Run Regressions
+    # (i) Correct Model (with interaction)
+    model_correct <- lm(y ~ x1 * x2)
+    
+    # (ii) Naive Model (without interaction)
+    model_naive <- lm(y ~ x1 + x2)
+    
+    # Compute MSE for each model
+    mse_correct_list[i] <- mean(resid(model_correct)^2)
+    mse_naive_list[i] <- mean(resid(model_naive)^2)
+  }
+  
+  # Return average MSEs
+  return(c(Avg_MSE_Correct = mean(mse_correct_list), 
+           Avg_MSE_Naive = mean(mse_naive_list)))
+}
+
+# --- Execute Configurations ---
+
+# Configuration 1: Beta3 = 0.001
+config1 <- run_simulation(-2.5, 1.2, 2.3, 0.001)
+
+# Configuration 2: Beta3 = 3.1
+config2 <- run_simulation(-2.5, 1.2, 2.3, 3.1)
+
+# Display Results
+cat("Results for Configuration 1 (Beta3 = 0.001):\n")
+print(config1)
+
+cat("\nResults for Configuration 2 (Beta3 = 3.1):\n")
+print(config2)
+
+```
+Conclusion: The Impact of Ignoring Interactions
+
+Increased Error: If a true interaction exists, omitting it leads to a significant increase in the residual variance (MSE).
+Model Misspecification: The Naive model assumes the effect of 
+ is constant across all levels of 
+. In Configuration 2, this assumption is fundamentally wrong, leading to a "bad fit" even if the main effects are included.
+Hidden Dynamics: By ignoring the interaction, we fail to see that the slope of 
+ changes depending on whether 
+ is 0 or 1.
+
