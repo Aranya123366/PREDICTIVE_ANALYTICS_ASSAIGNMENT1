@@ -1,0 +1,181 @@
+---
+title: "MDTS4214_729_PSET7"
+author: "729_ARANYA PRADHAN"
+date: "2026-03-19"
+output:
+  word_document: default
+  html_document: default
+---
+1.1. Split the data set into a training set and a test set randomly keeping 100
+observations in test set and remaining in the training set
+```{r}
+# Load required library
+library(ISLR)
+
+# Load dataset
+data(Hitters)
+
+# Remove rows with missing values
+Hitters_clean <- na.omit(Hitters)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Create test set with 100 observations
+test_index <- sample(1:nrow(Hitters_clean), 100)
+
+# Split data
+train <- Hitters_clean[-test_index, ]
+test  <- Hitters_clean[test_index, ]
+```
+
+2. Train the model using least squares and report the train MSE and test
+MSE.
+```{r}
+# Fit least squares model
+lm_model <- lm(Salary ~ ., data = train)
+
+# Predictions on training data
+train_pred <- predict(lm_model, newdata = train)
+
+# Compute Train MSE
+train_mse <- mean((train$Salary - train_pred)^2)
+
+# Predictions on test data
+test_pred <- predict(lm_model, newdata = test)
+
+# Compute Test MSE
+test_mse <- mean((test$Salary - test_pred)^2)
+
+# Display results
+train_mse
+test_mse
+```
+3. Fit ridge regression models on the training set, with grid values of λ.
+Report the following:
+(i) the dimension of the coefficient matrix so obtained.
+(ii) The l2 norm of the regression coefficients corresponding to the 50th
+and 60th choice of λ. Comment on the output.
+(iv) Test MSE corresponding to these two choices of λ.
+```{r}
+library(glmnet)
+
+# Convert to matrix form
+x_train <- model.matrix(Salary ~ ., train)[, -1]
+y_train <- train$Salary
+
+x_test <- model.matrix(Salary ~ ., test)[, -1]
+y_test <- test$Salary
+```
+```{r}
+# Create grid of lambda values
+grid <- 10^seq(10, -2, length = 100)
+
+# Fit ridge regression (alpha = 0)
+ridge_model <- glmnet(x_train, y_train, alpha = 0, lambda = grid)
+dim(coef(ridge_model))
+coef_50 <- coef(ridge_model, s = grid[50])
+coef_60 <- coef(ridge_model, s = grid[60])
+
+# Compute L2 norm
+l2_50 <- sqrt(sum(coef_50[-1]^2))
+l2_60 <- sqrt(sum(coef_60[-1]^2))
+
+l2_50
+l2_60
+# Predictions
+pred_50 <- predict(ridge_model, s = grid[50], newx = x_test)
+pred_60 <- predict(ridge_model, s = grid[60], newx = x_test)
+
+# Test MSE
+mse_50 <- mean((y_test - pred_50)^2)
+mse_60 <- mean((y_test - pred_60)^2)
+
+mse_50
+mse_60
+```
+4. Make a line plot (for all the predictors) of the standardized coefficients
+against the grid value of λ chosen by you. Interpret the graph.
+```{r}
+# Plot standardized coefficients vs lambda
+plot(ridge_model, xvar = "lambda", label = TRUE)
+```
+# Cross-validation for ridge
+cv_ridge <- cv.glmnet(x_train, y_train, alpha = 0)
+
+# Best lambda
+best_lambda <- cv_ridge$lambda.min
+
+# Test prediction
+ridge_pred <- predict(cv_ridge, s = best_lambda, newx = x_test)
+
+# Test MSE
+ridge_mse <- mean((y_test - ridge_pred)^2)
+
+best_lambda
+ridge_mse
+
+LASSO Regression:
+```{r}
+# Cross-validation for LASSO
+cv_lasso <- cv.glmnet(x_train, y_train, alpha = 1)
+
+# Predictions
+lasso_pred <- predict(cv_lasso, s = "lambda.min", newx = x_test)
+
+# Test MSE
+lasso_mse <- mean((y_test - lasso_pred)^2)
+
+# Number of non-zero coefficients
+lasso_coef <- coef(cv_lasso, s = "lambda.min")
+nonzero <- sum(lasso_coef != 0)
+
+lasso_mse
+nonzero
+```
+Elastic Net:
+```{r}
+# Elastic Net (alpha between 0 and 1)
+cv_enet <- cv.glmnet(x_train, y_train, alpha = 0.5)
+
+# Predictions
+enet_pred <- predict(cv_enet, s = "lambda.min", newx = x_test)
+
+# Test MSE
+enet_mse <- mean((y_test - enet_pred)^2)
+
+# Coefficients
+enet_coef <- coef(cv_enet, s = "lambda.min")
+
+enet_mse
+enet_coef
+```
+Interpretation
+
+Elastic Net combines:
+
+Ridge (L2) + LASSO (L1)
+
+Works well when predictors are highly correlated
+
+
+Elastic Net selects variables and shrinks coefficients simultaneously, providing a balance between ridge and LASSO regression.
+
+Step 9: Final Comparison
+Table (Very Important)
+Method	Test MSE	Feature
+Least Squares	…	High variance, overfitting
+Ridge	…	Shrinks coefficients
+LASSO	…	Variable selection
+Elastic Net	…	Hybrid method
+
+Final Interpretation (Write in Exam)
+Least Squares may overfit due to high variance.
+
+Ridge regression reduces variance by shrinking coefficients.
+
+LASSO performs both shrinkage and variable selection.
+
+Elastic Net combines advantages of both ridge and LASSO.
+
+The method with the lowest test MSE provides the most accurate prediction of Salary.
