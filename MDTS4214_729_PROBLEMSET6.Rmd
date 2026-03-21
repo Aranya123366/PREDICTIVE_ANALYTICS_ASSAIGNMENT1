@@ -1,0 +1,87 @@
+---
+title: "MDTS4214_729_PSET6"
+author: "729_ARANYA PRADHAN"
+date: "2026-03-21"
+output:
+  word_document: default
+  html_document: default
+---
+
+#*To demonstrate the application of subset selection methodsConsider the “Hitters” data. For loading the data you need to install ISLRlibrary. We wish to predict a baseball player’s salary on the basis of various predictors. So first we need to choose an optimal model.1. Clean the data by removing all rows that have missing value in any variable. You will be working with this clean data.
+```{r}
+library(ISLR)
+
+data(Hitters)
+
+# Remove missing values
+Hitters <- na.omit(Hitters)
+```
+# *2. Split the data randomly into train-test keeping 80% as training sample and remaining as test sample.
+
+```{r}
+set.seed(1)
+
+train_index <- sample(1:nrow(Hitters), 0.8*nrow(Hitters))
+
+train <- Hitters[train_index, ]
+test  <- Hitters[-train_index, ]
+```
+# *3. Perform the best subset selection on the training sample. While choosing the best model fit up to a 19 variable model. Choose the best model according to adjusted R squared, BIC , AIC and Cp values. In case the best model differs according to the selection criteria, report the best fitted model according to each selection criterion.
+```{r}
+library(leaps)
+
+best_model <- regsubsets(Salary ~ ., data = train, nvmax = 19)
+
+summary_best <- summary(best_model)
+# Adjusted R² (maximum)
+which.max(summary_best$adjr2)
+
+# BIC (minimum)
+which.min(summary_best$bic)
+
+# Cp (minimum)
+which.min(summary_best$cp)
+```
+# *4. Find the training MSE and test MSE for each of the best models selected according to different criterion as mentioned in 3 and compare their values.
+```{r}
+predict_regsubsets <- function(object, newdata, id){
+  form <- as.formula(object$call[[2]])
+  mat <- model.matrix(form, newdata)
+  coefi <- coef(object, id=id)
+  vars <- names(coefi)
+  pred <- mat[, vars] %*% coefi
+  return(pred)
+}
+
+# Example: model with k variables
+k <- which.min(summary_best$bic)
+
+# Train MSE
+train_pred <- predict_regsubsets(best_model, train, id=k)
+train_mse <- mean((train$Salary - train_pred)^2)
+
+# Test MSE
+test_pred <- predict_regsubsets(best_model, test, id=k)
+test_mse <- mean((test$Salary - test_pred)^2)
+
+train_mse
+test_mse
+```
+# *5. Repeat 3-4 using forward stepwise selection method.6. Repeat 3-4 using backward stepwise selection method.1 7. Compare the results of the three methods in terms of choice of best model,train MSE amd test MSE.
+```{r}
+forward_model <- regsubsets(Salary ~ ., data = train,
+                           nvmax = 19, method = "forward")
+
+summary_forward <- summary(forward_model)
+
+backward_model <- regsubsets(Salary ~ ., data = train,
+                            nvmax = 19, method = "backward")
+
+summary_backward <- summary(backward_model)
+summary_backward
+```
+Final Conclusion (Model Selection – Hitters Data)
+Different selection methods (Best Subset, Forward, Backward) may choose different models depending on criteria like Adjusted 𝑅2R2, BIC, and Cp.BIC usually selects a simpler model (fewer variables), while Adjusted 𝑅2R2 often prefers more complex models.
+When comparing performance:
+Training MSE is always lower for more complex models.
+But the best model is the one with the lowest Test MSE, not training MSE.
